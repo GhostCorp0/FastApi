@@ -1,1 +1,19 @@
 # FastApi
+
+## GET
+
+## POST
+
+## PUT
+
+## DELETE
+
+## SQLALCHEMY
+
+## PYDANTIC
+
+## JWT
+
+## INSERT DATA
+
+## FETCH DATA
