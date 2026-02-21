@@ -8,15 +8,5 @@ products = [
      "title": "Apple Macbook",
      "price": "10000",
      "count": 12,
-     },
-    {"id": 2,
-     "title": "Apple Macbook",
-     "price": "10000",
-     "count": 12,
-     },
-    {"id": 2,
-     "title": "Apple Macbook",
-     "price": "10000",
-     "count": 12,
      }
 ]
