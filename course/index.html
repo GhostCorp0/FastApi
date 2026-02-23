@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bluetooth Printer Flow</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f14;
+      --surface: #161820;
+      --surface2: #1e2130;
+      --border: #2a2d3e;
+      --teal: #4ff0c0;
+      --teal-dim: #1e6b56;
+      --blue: #6b8cff;
+      --text: #e0e4f0;
+      --muted: #6a7090;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      max-width: 860px;
+      margin: 0 auto 56px;
+    }
+    .page-header .tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .page-header h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 30%, var(--teal) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header p {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 520px;
+      line-height: 1.6;
+    }
+
+    /* ── Section wrapper ── */
+    .section {
+      max-width: 860px;
+      margin: 0 auto 40px;
+    }
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-label .num {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--teal);
+      background: var(--teal-dim);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .section-label h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      overflow-x: auto;
+    }
+
+    /* ═══════════════════════════════════════════════
+       DIAGRAM 1
+    ═══════════════════════════════════════════════ */
+    .transport-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0;
+      align-items: center;
+    }
+    .transport-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+    .transport-box .tb-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .transport-box .tb-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .transport-box .tb-sub {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .transport-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px;
+      gap: 6px;
+    }
+    .transport-arrow .arr-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .transport-arrow .arr-line {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(to right, var(--teal-dim), var(--teal));
+      position: relative;
+    }
+    .transport-arrow .arr-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 6px solid transparent;
+      border-left: 8px solid var(--teal);
+    }
+    .phone-line {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .wave {
+      flex: 1;
+      max-width: 180px;
+      height: 1px;
+      background: repeating-linear-gradient(
+        to right,
+        var(--teal-dim) 0, var(--teal-dim) 6px,
+        transparent 6px, transparent 10px
+      );
+    }
+
+    /* ═══════════════════════════════════════════════
+       DIAGRAM 2 — Flow
+    ═══════════════════════════════════════════════ */
+    .flow-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .flow-node {
+      flex-shrink: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-align: center;
+      min-width: 78px;
+    }
+    .flow-node .fn-title {
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .flow-node .fn-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    .flow-node.highlight {
+      border-color: var(--teal-dim);
+      background: #0e2820;
+    }
+    .flow-node.db-node {
+      border-color: var(--blue);
+      background: #111a30;
+      border-style: dashed;
+    }
+    .flow-arrow {
+      flex-shrink: 0;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ═══════════════════════════════════════════════
+       DIAGRAM 3 — Driver selection
+    ═══════════════════════════════════════════════ */
+    .driver-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .driver-group {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .driver-group .dg-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .driver-chain {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .driver-node {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .driver-node span {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 400;
+      display: block;
+      margin-top: 2px;
+    }
+    .driver-connector {
+      text-align: center;
+      color: var(--teal-dim);
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    .driver-footer {
+      text-align: center;
+      padding-top: 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════════════
+       DIAGRAM 4 — Full data path
+    ═══════════════════════════════════════════════ */
+    .path-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .path-col {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .path-col .pc-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .path-chain {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .path-node {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pn-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .path-mini-arrow {
+      text-align: center;
+      color: var(--teal-dim);
+      font-size: 13px;
+      line-height: 1;
+    }
+    .path-send {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .path-send .ps-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--blue);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .send-chain {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+    }
+    .send-node {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .sn-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      font-weight: 400;
+      display: block;
+      margin-top: 2px;
+    }
+    .send-arr {
+      flex-shrink: 0;
+      padding: 0 8px;
+      color: var(--teal-dim);
+      font-size: 16px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       DIAGRAM 5 — Sequence (pure SVG)
+    ═══════════════════════════════════════════════ */
+    .seq-wrap { overflow-x: auto; }
+
+    @media (max-width: 600px) {
+      .transport-grid { grid-template-columns: 1fr; }
+      .transport-arrow { transform: rotate(90deg); margin: 8px auto; }
+      .phone-line { flex-direction: column; }
+      .driver-grid { grid-template-columns: 1fr; }
+      .path-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <div class="tag">// system architecture</div>
+    <h1>Bluetooth Printer Flow</h1>
+    <p>How a mobile app discovers, connects, and sends raw ESC/POS bytes to a Bluetooth printer via RFCOMM.</p>
+  </div>
+
+  <!-- 1 -->
+  <div class="section">
+    <div class="section-label">
+      <span class="num">01</span>
+      <h2>What we use to print</h2>
+    </div>
+    <div class="card">
+      <div class="transport-grid">
+        <div class="transport-box">
+          <div class="tb-label">Transport — how we send</div>
+          <div class="tb-title">Bluetooth RFCOMM</div>
+          <div class="tb-sub">Socket to printer's MAC address<br>Wireless serial-port emulation</div>
+        </div>
+        <div class="transport-arrow">
+          <div class="arr-label">sends bytes</div>
+          <div class="arr-line"></div>
+        </div>
+        <div class="transport-box">
+          <div class="tb-label">Data — what we send</div>
+          <div class="tb-title">Printer Commands</div>
+          <div class="tb-sub">ESC/POS, ZPL, CPCL…<br>Encoded as raw byte arrays</div>
+        </div>
+        <div class="phone-line">
+          <span>📱 Phone</span>
+          <div class="wave"></div>
+          <span style="color:var(--teal);font-size:10px;">━━━ wireless ━━━</span>
+          <div class="wave"></div>
+          <span>🖨️ Printer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="section">
+    <div class="section-label">
+      <span class="num">02</span>
+      <h2>Add printer → Select → Connect → Save</h2>
+    </div>
+    <div class="card">
+      <div class="flow-row">
+        <div class="flow-node highlight"><div class="fn-title">Settings</div><div class="fn-sub">Add Printer</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node"><div class="fn-title">Magic</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node"><div class="fn-title">Select</div><div class="fn-sub">Bluetooth</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node"><div class="fn-title">DeviceList</div><div class="fn-sub">Activity</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node"><div class="fn-title">Pick device</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node"><div class="fn-title">Save MAC</div><div class="fn-sub">+ name</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node highlight"><div class="fn-title">Tap Connect</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node"><div class="fn-title">Bt.connect</div><div class="fn-sub">RFCOMM</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node highlight"><div class="fn-title">Tap Save</div></div>
+        <div class="flow-arrow"><svg width="22" height="14" viewBox="0 0 22 14"><path d="M0 7 H16 M10 2 L16 7 L10 12" stroke="#4ff0c0" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <div class="flow-node db-node"><div class="fn-title">DB</div><div class="fn-sub">PrinterEntity</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="section">
+    <div class="section-label">
+      <span class="num">03</span>
+      <h2>Which printer &amp; which driver</h2>
+    </div>
+    <div class="card">
+      <div class="driver-grid">
+        <div class="driver-group">
+          <div class="dg-label">When user prints</div>
+          <div class="driver-chain">
+            <div class="driver-node">Print job <span>has printer NAME</span></div>
+            <div class="driver-connector">↓</div>
+            <div class="driver-node">getByName <span>or getDefault</span></div>
+            <div class="driver-connector">↓</div>
+            <div class="driver-node" style="border-color:var(--blue);background:#111a30;">PrinterEntity <span>name · MAC · profileClass</span></div>
+          </div>
+        </div>
+        <div class="driver-group">
+          <div class="dg-label">Driver selection</div>
+          <div class="driver-chain">
+            <div class="driver-node">PrinterDriverFactory <span>.getByProfile()</span></div>
+            <div class="driver-connector">↓</div>
+            <div class="driver-node">profileClass <span>e.g. esc_general</span></div>
+            <div class="driver-connector">↓</div>
+            <div class="driver-node" style="border-color:var(--teal-dim);background:#0e2820;">EscGeneral Driver <span>ready to encode bytes</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="driver-footer">PrinterEntity.profileClass ──→ factory resolves driver instance</div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="section">
+    <div class="section-label">
+      <span class="num">04</span>
+      <h2>Send data to printer — full path</h2>
+    </div>
+    <div class="card">
+      <div class="path-grid">
+        <div class="path-col">
+          <div class="pc-label">User actions</div>
+          <div class="path-chain">
+            <div class="path-node">User: Print</div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node">Choose RawBT <span class="pn-sub">printer</span></div>
+          </div>
+        </div>
+        <div class="path-col">
+          <div class="pc-label">Service</div>
+          <div class="path-chain">
+            <div class="path-node">RawBtService</div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node">RawBtPrintService</div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node">printQueue</div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node">PrintThread</div>
+          </div>
+        </div>
+        <div class="path-col">
+          <div class="pc-label">Resolve</div>
+          <div class="path-chain">
+            <div class="path-node">driver_get <span class="pn-sub">name</span></div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node" style="border-color:var(--blue);">DB getByName</div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node">connectPrinter <span class="pn-sub">MAC</span></div>
+            <div class="path-mini-arrow">↓</div>
+            <div class="path-node">Bt.connect</div>
+          </div>
+        </div>
+      </div>
+      <div class="path-send">
+        <div class="ps-label">Send data</div>
+        <div class="send-chain">
+          <div class="send-node">job.execute <span class="sn-sub">PDF → ESC/POS</span></div>
+          <div class="send-arr">→</div>
+          <div class="send-node">driver.bytes</div>
+          <div class="send-arr">→</div>
+          <div class="send-node">transport.write</div>
+          <div class="send-arr">→</div>
+          <div class="send-node">BluetoothSocket</div>
+          <div class="send-arr">→</div>
+          <div class="send-node" style="border-color:var(--teal-dim);background:#0e2820;">🖨️ Printer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 — Sequence (pure SVG, no library) -->
+  <div class="section">
+    <div class="section-label">
+      <span class="num">05</span>
+      <h2>Print sequence</h2>
+    </div>
+    <div class="card">
+      <div class="seq-wrap">
+        <svg viewBox="0 0 800 430" width="100%" style="min-width:620px;display:block;" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#4ff0c0"/>
+            </marker>
+            <marker id="ah-dim" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#1e6b56"/>
+            </marker>
+          </defs>
+
+          <!-- ── Actors (top) ── -->
+          <!-- x positions: 75, 225, 370, 520, 680 -->
+          <g font-family="Syne, sans-serif" font-size="11">
+            <rect x="25"  y="8"  width="100" height="42" rx="7" fill="#1e2130" stroke="#1e6b56" stroke-width="1"/>
+            <text x="75"  y="26" text-anchor="middle" fill="#e0e4f0" font-weight="600">User</text>
+            <text x="75"  y="42" text-anchor="middle" fill="#6a7090" font-size="9" font-family="JetBrains Mono,monospace">actor</text>
+
+            <rect x="163" y="8"  width="124" height="42" rx="7" fill="#1e2130" stroke="#1e6b56" stroke-width="1"/>
+            <text x="225" y="26" text-anchor="middle" fill="#e0e4f0" font-weight="600">RawBtPrintSvc</text>
+            <text x="225" y="42" text-anchor="middle" fill="#6a7090" font-size="9" font-family="JetBrains Mono,monospace">service</text>
+
+            <rect x="320" y="8"  width="100" height="42" rx="7" fill="#111a30" stroke="#6b8cff" stroke-width="1" stroke-dasharray="4,2"/>
+            <text x="370" y="26" text-anchor="middle" fill="#e0e4f0" font-weight="600">Database</text>
+            <text x="370" y="42" text-anchor="middle" fill="#6a7090" font-size="9" font-family="JetBrains Mono,monospace">storage</text>
+
+            <rect x="468" y="8"  width="104" height="42" rx="7" fill="#1e2130" stroke="#1e6b56" stroke-width="1"/>
+            <text x="520" y="26" text-anchor="middle" fill="#e0e4f0" font-weight="600">Bt Transport</text>
+            <text x="520" y="42" text-anchor="middle" fill="#6a7090" font-size="9" font-family="JetBrains Mono,monospace">rfcomm</text>
+
+            <rect x="630" y="8"  width="100" height="42" rx="7" fill="#0e2820" stroke="#4ff0c0" stroke-width="1"/>
+            <text x="680" y="26" text-anchor="middle" fill="#e0e4f0" font-weight="600">🖨️ Printer</text>
+            <text x="680" y="42" text-anchor="middle" fill="#4ff0c0" font-size="9" font-family="JetBrains Mono,monospace">device</text>
+          </g>
+
+          <!-- ── Lifelines ── -->
+          <g stroke="#2a2d3e" stroke-width="1" stroke-dasharray="4,4">
+            <line x1="75"  y1="50" x2="75"  y2="416"/>
+            <line x1="225" y1="50" x2="225" y2="416"/>
+            <line x1="370" y1="50" x2="370" y2="416"/>
+            <line x1="520" y1="50" x2="520" y2="416"/>
+            <line x1="680" y1="50" x2="680" y2="416"/>
+          </g>
+
+          <!-- Activation bar on SVC -->
+          <rect x="221" y="74" width="8" height="310" fill="#1e6b56" opacity="0.5" rx="2"/>
+
+          <!-- ── Messages ── -->
+          <g font-family="JetBrains Mono, monospace" font-size="10">
+
+            <!-- 1. User → SVC -->
+            <line x1="75" y1="82" x2="218" y2="82" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="147" y="78" text-anchor="middle" fill="#e0e4f0">Print(printer name)</text>
+
+            <!-- 2. SVC → DB -->
+            <line x1="229" y1="108" x2="363" y2="108" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="297" y="104" text-anchor="middle" fill="#e0e4f0">getByName(name)</text>
+
+            <!-- 3. DB → SVC (return, dashed) -->
+            <line x1="363" y1="130" x2="229" y2="130" stroke="#1e6b56" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-dim)"/>
+            <text x="297" y="126" text-anchor="middle" fill="#6a7090">PrinterEntity (MAC, profile)</text>
+
+            <!-- 4. SVC → BT -->
+            <line x1="229" y1="156" x2="513" y2="156" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="371" y="152" text-anchor="middle" fill="#e0e4f0">connectPrinter(MAC)</text>
+
+            <!-- 5. BT → PR -->
+            <line x1="524" y1="178" x2="673" y2="178" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="600" y="174" text-anchor="middle" fill="#e0e4f0">RFCOMM connect</text>
+
+            <!-- 6. PR → BT (return, dashed) -->
+            <line x1="673" y1="200" x2="524" y2="200" stroke="#1e6b56" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-dim)"/>
+            <text x="600" y="196" text-anchor="middle" fill="#6a7090">connected ✓</text>
+
+            <!-- 7. SVC self-loop -->
+            <path d="M229,226 Q196,226 196,238 Q196,250 229,250" fill="none" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="160" y="242" text-anchor="middle" fill="#e0e4f0">PDF→ESC/POS</text>
+
+            <!-- 8. SVC → BT -->
+            <line x1="229" y1="272" x2="513" y2="272" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="371" y="268" text-anchor="middle" fill="#e0e4f0">driver.bytes(escPosBytes)</text>
+
+            <!-- 9. BT → PR -->
+            <line x1="524" y1="294" x2="673" y2="294" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="600" y="290" text-anchor="middle" fill="#e0e4f0">socket.write(bytes)</text>
+
+            <!-- 10. PR self-loop -->
+            <path d="M680,316 Q714,316 714,328 Q714,340 680,340" fill="none" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="738" y="333" text-anchor="start" fill="#4ff0c0">print 🖨️</text>
+
+            <!-- 11. SVC → BT -->
+            <line x1="229" y1="362" x2="513" y2="362" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="371" y="358" text-anchor="middle" fill="#e0e4f0">disconnectPrinter</text>
+
+            <!-- 12. BT → PR -->
+            <line x1="524" y1="384" x2="673" y2="384" stroke="#4ff0c0" stroke-width="1.5" marker-end="url(#ah)"/>
+            <text x="600" y="380" text-anchor="middle" fill="#e0e4f0">close socket</text>
+
+          </g>
+
+          <!-- ── Actors (bottom mirrors) ── -->
+          <g font-family="Syne, sans-serif" font-size="10">
+            <rect x="25"  y="400" width="100" height="22" rx="5" fill="#1e2130" stroke="#1e6b56" stroke-width="1"/>
+            <text x="75"  y="415" text-anchor="middle" fill="#6a7090">User</text>
+
+            <rect x="163" y="400" width="124" height="22" rx="5" fill="#1e2130" stroke="#1e6b56" stroke-width="1"/>
+            <text x="225" y="415" text-anchor="middle" fill="#6a7090">RawBtPrintSvc</text>
+
+            <rect x="320" y="400" width="100" height="22" rx="5" fill="#111a30" stroke="#6b8cff" stroke-width="1" stroke-dasharray="4,2"/>
+            <text x="370" y="415" text-anchor="middle" fill="#6a7090">Database</text>
+
+            <rect x="468" y="400" width="104" height="22" rx="5" fill="#1e2130" stroke="#1e6b56" stroke-width="1"/>
+            <text x="520" y="415" text-anchor="middle" fill="#6a7090">Bt Transport</text>
+
+            <rect x="630" y="400" width="100" height="22" rx="5" fill="#0e2820" stroke="#4ff0c0" stroke-width="1"/>
+            <text x="680" y="415" text-anchor="middle" fill="#4ff0c0">Printer</text>
+          </g>
+
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

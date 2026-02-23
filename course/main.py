@@ -44,5 +44,19 @@ def request_body(request:Request):
     }
 
 #Different http methods
+#PUT #POST #PATCH #GET #DELETE
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
