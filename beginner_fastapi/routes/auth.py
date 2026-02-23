@@ -4,12 +4,12 @@ import bcrypt
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 
-from models.user import User
-from pydantic_schema.user_create import UserCreate
+from beginner_fastapi.models.user import User
+from beginner_fastapi.pydantic_schema.user_create import UserCreate
 from fastapi import APIRouter
 
-from pydantic_schema.user_login import UserLogin
-from src.database import get_db
+from beginner_fastapi.pydantic_schema.user_login import UserLogin
+from beginner_fastapi.src.database import get_db
 
 router= APIRouter()
 

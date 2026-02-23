@@ -1,6 +1,6 @@
 from sqlalchemy import Column, VARCHAR, TEXT, LargeBinary
 
-from models.base import Base
+from beginner_fastapi.models.base import Base
 
 
 class User(Base):
