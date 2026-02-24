@@ -14,4 +14,6 @@ def create_task(body:TaskSchema,db = Depends(get_db)):
 def get_all_tasks(db = Depends(get_db)):
     return controller.get_tasks(db)
 
-
+@task_routes.get("/one_task")
+def get_one_task(task_id:int,db =Depends(get_db)):
+    return controller.get_one_task(task_id,db)
