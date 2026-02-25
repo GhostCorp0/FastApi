@@ -11,7 +11,6 @@ task_routes = APIRouter(prefix='/tasks')
 def create_task(body:TaskSchema,db:Session = Depends(get_db)):
     return controller.create_task(body,db)
 
-
 @task_routes.get("/all_tasks",response_model=List[TaskResponseSchema],status_code=status.HTTP_200_OK)
 def get_all_tasks(db:Session = Depends(get_db)):
     return controller.get_tasks(db)
