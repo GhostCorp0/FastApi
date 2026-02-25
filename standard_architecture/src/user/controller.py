@@ -1,14 +1,21 @@
 from http.client import HTTPException
 from fastapi import HTTPException
 from pwdlib import PasswordHash
-from standard_architecture.src.user.dtos import UserSchema
+from standard_architecture.src.user.dtos import UserSchema, LoginSchema
 from sqlalchemy.orm import Session
 from standard_architecture.src.user.models import UserModel
+from fastapi import status
+from standard_architecture.src.utils.settings import settings
+from datetime import datetime,timedelta
+import jwt
 
 password_hash = PasswordHash.recommended()
 
 def get_password_hash(password):
     return password_hash.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return password_hash.verify(plain_password, hashed_password)
 
 def register(body:UserSchema,db:Session):
     is_user = db.query(UserModel).filter(UserModel.username == body.username).first()
@@ -30,4 +37,19 @@ def register(body:UserSchema,db:Session):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+
+def login_user(body:LoginSchema,db:Session):
+    user = db.query(UserModel).filter(UserModel.username == body.username).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="You Entered Wrong Username")
+
+    if not verify_password(body.password,user.hash_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="You Entered Wrong Password")
+
+    exp_time = datetime.now() + timedelta(minutes = settings.EXP_TIME)
+
+    token = jwt.encode({"_id":user.id,"exp":exp_time},settings.SECRET_KEY,settings.ALGORITHM)
+
+    return {"token":token}
 
