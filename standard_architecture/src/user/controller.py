@@ -1,5 +1,4 @@
-from http.client import HTTPException
-from fastapi import HTTPException
+from fastapi import HTTPException,status,Request
 from pwdlib import PasswordHash
 from standard_architecture.src.user.dtos import UserSchema, LoginSchema
 from sqlalchemy.orm import Session
@@ -53,3 +52,22 @@ def login_user(body:LoginSchema,db:Session):
 
     return {"token":token}
 
+## TOKEN Send -
+def is_authenticated(request:Request,db:Session):
+    token = request.headers.get("authorization")
+    data = jwt.decode(token,settings.SECRET_KEY,settings.ALGORITHM)
+    user_id = data.get("_id")
+    exp_time = data.get("exp")
+
+    current_time = datetime.now().timestamp()
+
+    if current_time > exp_time:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="You are unauthorized")
+
+    user = db.query(UserModel).filter(UserModel.id ==  user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="You Entered Wrong Username")
+
+
+    return user
